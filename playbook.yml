@@ -1,0 +1,53 @@
+---
+- name: Install k8s
+  hosts: cluster
+  remote_user: ec2-user
+
+  tasks:
+  - name: Install docker
+    become: yes
+    become_method: sudo
+    command: "amazon-linux-extras install -y docker"
+  - name: Add user into docker group
+    become: yes
+    become_method: sudo
+    command: "usermod -aG docker ec2-user"
+  - name: Start docker
+    become: yes
+    become_method: sudo
+    service:
+      name:  docker
+      state: started
+  - name: Add repo
+    become: yes
+    become_method: sudo
+    yum_repository:
+        name: kubernetes
+        description: Yum for k8s
+        baseurl: https://packages.cloud.google.com/yum/repos/kubernetes-el7-\$basearch
+        enabled: yes
+        gpgcheck: yes
+        gpgkey: https://packages.cloud.google.com/yum/doc/yum-key.gpg https://packages.cloud.google.com/yum/doc/rpm-package-key.gpg
+        exclude: kubectl kubeadm kubelet
+  - name: upddate packages
+    become: yes
+    become_method: sudo
+    yum:
+      name: "*"
+      state: latest
+  - name: Install k8s
+    become: yes
+    become_method: sudo
+    yum:
+      name: "{{ item }}"
+      state: latest
+      update_cache: yes
+      disable_excludes: kubernetes
+    with_list:
+      - kubelet
+      - kubeadm
+      - kubectl
+  - name: enable kubelet
+    become: yes
+    become_method: sudo
+    command: "systemctl enable --now kubelet"

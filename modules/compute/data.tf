@@ -40,7 +40,3 @@ data "aws_security_group" "nodes_sg" {
     values = ["nodes_sg"]
   }
 }
-
-output "private-key" {
-  value = tls_private_key.ssh.private_key_pem
-}

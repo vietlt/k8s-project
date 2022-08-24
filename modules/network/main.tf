@@ -59,6 +59,30 @@ resource "aws_subnet" "private_subnet" {
   }
 }
 
+resource "aws_eip" "nat-ip" {
+  vpc = true
+}
+
+resource "aws_nat_gateway" "nat-gateway" {
+  allocation_id = aws_eip.nat-ip.id
+  subnet_id     = aws_subnet.public_subnet.id
+}
+
+resource "aws_route_table" "table-private" {
+  vpc_id = aws_vpc.vpc.id
+  route {
+    cidr_block     = "0.0.0.0/0"
+    nat_gateway_id = aws_nat_gateway.nat-gateway.id
+  }
+}
+
+resource "aws_route_table_association" "table-private-attach" {
+  subnet_id      = aws_subnet.private_subnet[count.index].id
+  route_table_id = aws_route_table.table-private.id
+  count          = length(var.private_cird)
+}
+
+
 // Create bastion security group
 resource "aws_security_group" "bastion_sg" {
   name    = "bastion_sg"
@@ -142,5 +166,29 @@ resource "aws_security_group" "nodes_sg" {
 
   tags = {
     Name = "nodes_sg"
+  }
+}
+
+resource "aws_security_group" "alb-sg" {
+  name        = "alb-sg"
+  description = "allow all"
+  vpc_id      = aws_vpc.vpc.id
+
+  ingress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "lb-sg"
   }
 }
